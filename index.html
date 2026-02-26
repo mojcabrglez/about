@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LLM Benchmark Taxonomy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #f8f7f4;
+      --white:     #ffffff;
+      --border:    #e0ddd7;
+      --text:      #1a1916;
+      --muted:     #8c8880;
+      --row-hover: #f2f0ec;
+      --d0-accent: #1a1916;
+      --d1-accent: #6b7c93;
+      --d2-accent: #b5a88a;
+      --tag-yellow-bg: rgba(232,200,122,0.18);
+      --tag-yellow-fg: #8a6d1e;
+      --tag-green-bg:  rgba(111,207,151,0.18);
+      --tag-green-fg:  #1c7a4a;
+      --tag-blue-bg:   rgba(107,163,210,0.18);
+      --tag-blue-fg:   #1d5f8a;
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 0 32px; }
+
+    header {
+      padding: 52px 0 38px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 48px;
+      animation: fadeUp 0.45s ease both;
+    }
+    header .container { display: flex; justify-content: space-between; align-items: flex-end; }
+
+    .eyebrow {
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Libre Baskerville', serif;
+      font-size: 2rem; font-weight: 400; line-height: 1.15;
+    }
+    h1 em { font-style: italic; color: var(--muted); }
+
+    .section { margin-bottom: 52px; animation: fadeUp 0.45s ease both; }
+    .section-label {
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--muted); padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Controls */
+    .controls {
+      display: flex; justify-content: flex-end; gap: 8px; padding: 10px 0;
+    }
+    .ctrl-btn {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); background: transparent;
+      border: 1px solid var(--border); padding: 4px 10px;
+      border-radius: 2px; cursor: pointer; transition: background 0.12s, color 0.12s;
+    }
+    .ctrl-btn:hover { background: var(--row-hover); color: var(--text); }
+
+    /* Accordion root */
+    .accordion-root {
+      border: 1px solid var(--border); border-top: none; background: var(--white);
+    }
+
+    /* Node wrapper */
+    .ac-node { border-bottom: 1px solid var(--border); }
+    .ac-node:last-child { border-bottom: none; }
+
+    /* Trigger button */
+    .ac-trigger {
+      display: flex; align-items: flex-start; gap: 0;
+      width: 100%; background: transparent; border: none;
+      cursor: pointer; text-align: left;
+      font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text);
+      padding: 0; transition: background 0.12s; position: relative;
+    }
+    .ac-trigger:hover { background: var(--row-hover); }
+    .ac-trigger.open  { background: var(--row-hover); }
+
+    /* Depth accent strips */
+    .ac-node[data-depth="0"] > .ac-trigger { border-left: 3px solid var(--d0-accent); }
+    .ac-node[data-depth="1"] > .ac-trigger { border-left: 3px solid var(--d1-accent); }
+    .ac-node[data-depth="2"] > .ac-trigger { border-left: 3px solid var(--d2-accent); }
+
+    /* Indent rail */
+    .ac-indent { display: flex; flex-shrink: 0; }
+    .ac-indent-unit {
+      width: 20px; flex-shrink: 0; position: relative;
+    }
+    .ac-indent-unit::before {
+      content: ''; position: absolute; left: 50%; top: 0; bottom: 0;
+      width: 1px; background: var(--border);
+    }
+
+    /* Chevron column */
+    .ac-chevron-col {
+      width: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding-top: 13px; padding-bottom: 13px;
+    }
+    .ac-chevron {
+      width: 13px; height: 13px; color: var(--muted);
+      transition: transform 0.22s ease; flex-shrink: 0;
+    }
+    .ac-trigger.open > .ac-chevron-col .ac-chevron { transform: rotate(90deg); }
+    .ac-leaf-spacer { width: 32px; flex-shrink: 0; }
+
+    /* Row content */
+    .ac-row-content {
+      flex: 1; display: flex; align-items: baseline;
+      flex-wrap: wrap; gap: 6px 10px; padding: 12px 16px 12px 0;
+    }
+
+    /* Depth-0 name: serif */
+    .ac-node[data-depth="0"] > .ac-trigger .ac-name {
+      font-family: 'Libre Baskerville', serif; font-size: 14px; font-weight: 400;
+    }
+
+    /* Children panel */
+    .ac-children { display: none; border-top: 1px solid var(--border); animation: panelIn 0.18s ease; }
+    .ac-children.open { display: block; }
+    @keyframes panelIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Leaf rows */
+    .ac-leaf { display: flex; align-items: flex-start; border-bottom: 1px solid var(--border); }
+    .ac-leaf:last-child { border-bottom: none; }
+    .ac-leaf[data-depth="1"] { border-left: 3px solid var(--d1-accent); }
+    .ac-leaf[data-depth="2"] { border-left: 3px solid var(--d2-accent); }
+    .ac-leaf[data-depth="3"] { border-left: 3px solid transparent; }
+
+    .ac-leaf-content {
+      flex: 1; display: flex; align-items: baseline;
+      flex-wrap: wrap; gap: 6px 10px; padding: 11px 16px 11px 0;
+    }
+
+    /* Text styles */
+    .ac-name { font-weight: 500; white-space: nowrap; }
+    .ac-desc { color: var(--muted); font-size: 12px; line-height: 1.65; flex-basis: 100%; padding-right: 8px; }
+
+    /* Tags */
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 2px;
+      font-size: 10px; letter-spacing: 0.06em; font-weight: 500; white-space: nowrap;
+    }
+    .tag-yellow { background: var(--tag-yellow-bg); color: var(--tag-yellow-fg); }
+    .tag-green  { background: var(--tag-green-bg);  color: var(--tag-green-fg); }
+    .tag-blue   { background: var(--tag-blue-bg);   color: var(--tag-blue-fg); }
+
+
+
+    /* ── Google Sheets embed ── */
+    .sheets-wrapper {
+      border: 3 px dotted var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .sheets-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .sheets-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .sheets-dot {
+      width: 8px; height: 8px;
+      background: var(--accent2);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+    .sheets-link {
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+      border: 1px solid rgba(232,200,122,0.3);
+      padding: 10px 10px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .sheets-link:hover { background: rgba(232,200,122,0.08); }
+
+    .sheets-placeholder svg { opacity: 0.3; }
+    .sheets-placeholder p { font-size: 13px; text-align: center; max-width: 340px; line-height: 1.7; }
+    .sheets-placeholder code {
+      background: var(--border);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: var(--accent);
+    }
+    .sheets-embed {
+      width: 100%;
+      height: 800px;
+	  zoom: 80%;
+      border: none;
+      display: flex;
+      padding: 5px 5px 5px 5px;
+    }
+
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 22px 0; margin-top: 16px; color: var(--muted); font-size: 11px; }
+    footer .container { display: flex; justify-content: space-between; }
+
+    @media (max-width: 600px) {
+      .container { padding: 0 16px; }
+      header .container { flex-direction: column; gap: 12px; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div>
+      <div class="eyebrow">Demo Page</div>
+      <h1>Charting the European LLM Benchmarking Landscape<br/><em>A Proposal</em></h1>
+      <p class="subtitle">
+        <br/>An overview of the benchmark taxonomy presented in the paper <em>Charting the LLM Benchmarking Landscape: A New Taxonomy and a Set of Best Practices</em>.
+<br/>  Use the table below to explore the taxonomy and scroll down to view the live demo spreadsheet.</p>
+   <br/> </div>
+  </div>
+</header>
+
+<div class="container">
+  <section class="section">
+    <div class="section-label">Benchmark Taxonomy</div>
+
+    <div class="controls">
+      <button class="ctrl-btn" onclick="expandAll()">Expand all</button>
+      <button class="ctrl-btn" onclick="collapseAll()">Collapse all</button>
+    </div>
+
+    <div class="accordion-root" id="taxonomy-root">
+
+<div class="ac-node" data-depth="0">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="tag tag-yellow">Language capabilities</span><span class="ac-desc">Language-related tasks and scenarios that evaluate core linguistic skills of large language models (LLMs), including natural language understanding, generation, and interaction in human language.</span></div></button>
+  <div class="ac-children">
+<div class="ac-node" data-depth="1">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="ac-name">1.1 &mdash; Natural language understanding and generation</span><span class="ac-desc">Ability to interpret, process, and produce grammatically correct, coherent and contextually appropriate text.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.1.1 &mdash; Comprehension</span><span class="ac-desc">Understanding text meaning, intent, and details in written or spoken input. E.g., the English question-answering BoolQ \citep{clark-etal-2019-boolq} dataset, ReCoRD (Reading Comprehension with Commonsense Reasoning, \citealp{zhang2018record}) dataset, and Multi-Sentence Reading Comprehension (MultiRC, \citealp{MultiRC2018}) dataset, the English RTE (Recognizing Textual Entailment, \citealp{giampiccolo2007third-rte}) and Hungarian HuRTE \citep{ligeti-nagyHuLUHungarianLanguage2024} datasets, and others.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.1.2 &mdash; Context sensitivity</span><span class="ac-desc">Identifying meaning, tone or style from contextual clues and responding accordingly; maintaining consistency across longer discourse. E.g., the English WiC (Words in Context, \citealp{pilehvar-camacho-collados-2019-wic}) dataset.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.1.3 &mdash; Natural language inference</span><span class="ac-desc">Determining a relationship between sentences, e.g., whether they contradict, entail, or are neutral to each other. E.g., the English CommitmentBank \citep{de2019commitmentbank} dataset and the Hungarian CommitmentBank Corpus (HuCB, \citealp{ligeti-nagyHuLUHungarianLanguage2024}), the Slovene Natural Language Inference Dataset SI-NLI \citeplanguageresource{si-nli-clarin} and the Hungarian anaphora resolution datasets (HuWNLI, \citealp{vadasz2022winograd}).</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.1.4 &mdash; Summarization</span><span class="ac-desc">Condensing text while preserving key information and intent. E.g., the English CNN/DailyMail text summarization benchmark \citep{nallapati-etal-2016-abstractive}, and the English BillSum benchmark for legal text summarization \citep{kornilova-eidelman-2019-billsum}.</span></div></div>
+  </div>
+</div>
+<div class="ac-node" data-depth="1">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="ac-name">1.2 &mdash; General linguistic competence</span><span class="ac-desc">Mastering grammar, style, and pragmatic use of language.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.2.1 &mdash; Grammar</span><span class="ac-desc">Producing text that is grammatically correct in terms of syntax, identifying grammatical errors or correcting them. E.g., the Benchmark of Linguistic Minimal Pairs for English (BLiMP, \citealp{warstadt-etal-2020-blimp-benchmark}), the English Corpus of Linguistic Acceptability (CoLA, \citealp{warstadt2019neural}) and Hungarian Corpus of Linguistic Acceptability (HuCOLA, \citealp{ligeti-nagyHuLUHungarianLanguage2024}), and the Polish linguistic and cultural competency benchmark (PLCC, \citealp{dadasEvaluatingPolishLinguistic2025}) dataset.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.2.2 &mdash; Style</span><span class="ac-desc">Identifying the tone, register, or rhetorical style in an input or generating the output in the appropriate tone, register or rhetorical style. E.g., the English Grammarly’s Yahoo Answers Formality Corpus (GYAFC) for benchmarking formality style transfer \citep{rao2018dear}.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.2.3 &mdash; Conversation  &amp; pragmatics</span><span class="ac-desc">Identifying the intent of the written and spoken output and other social aspects of communication, such as politeness, sarcasm, emotions, implicit and figurative meaning. E.g., the multilingual MultiPragEval \citep{parkMultiPragEvalMultilingualPragmatic2024} and the Slovenian SloPragEval pragmatics understanding benchmarks, the English IMDB \citep{maas-etal-2011-learning} and multilingual ParlaSent (\citealplanguageresource{parlasent-clarin}; \citealp{mochtak2024parlasent}) sentiment identification datasets, English EN-GINCO and Slovenian GINCO automatic genre identification benchmark (\citealp{kuzman2023automatic}; \citealplanguageresource{ginco-clarin}), and the English Stanford Politeness Corpus \citep{danescu2013computational}.</span></div></div>
+  </div>
+</div>
+<div class="ac-node" data-depth="1">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="ac-name">1.3 &mdash; Specific linguistic competence</span><span class="ac-desc">Mastering specific uses of language, such as creative or specialized language.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.3.1 &mdash; Creativity</span><span class="ac-desc">Producing original, novel, or imaginative language (e.g., storytelling, poetry, jokes).</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.3.2 &mdash; Terminology  &amp; specialized language</span><span class="ac-desc">Correct use and understanding of domain-specific vocabulary and professional jargon.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.3.3 &mdash; Language varieties</span><span class="ac-desc">Benchmarks evaluating diverse forms of language use, including child language, second-language learners, and atypical communication.</span></div></div>
+  </div>
+</div>
+<div class="ac-node" data-depth="1">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="ac-name">1.4 &mdash; Multilinguality</span><span class="ac-desc">Ability to operate across languages and dialects.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.4.1 &mdash; Translation</span><span class="ac-desc">Rendering meaning from one language to another with fidelity. E.g., the Flores-101 and FLORES-200 datasets \citep{goyal-etal-2022-flores}, the translation tasks in the BenchMax \citep{huangBenchMAXComprehensiveMultilingual2025a} dataset, and the machine translation benchmarks in the Slovenian SloBENCH evaluation framework (https://slobench.cjvt.si}).</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.4.2 &mdash; Code-switching / multilingual interaction</span><span class="ac-desc">Ability to detect the use of multiple languages, identify which language is being used, and to mix languages fluidly within discourse.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.4.3 &mdash; Dialectal capabilities</span><span class="ac-desc">Understanding or generating dialectal or regional variations. E.g., the DIALECTBENCH~\citep{faisal-etal-2024-dialectbench} dataset.</span></div></div>
+  </div>
+</div>
+<div class="ac-node" data-depth="1">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="ac-name">1.5 &mdash; Speech</span><span class="ac-desc">Understanding and generation of spoken language, mastery of intonation, prosody, and other features unique to speech. E.g., tasks in the English Speech processing Universal PERformance Benchmark (SUPERB, \citealp{yang2021superb}) and its multilingual extension, the Multilingual Speech processing Universal PERformance Benchmark (ML-SUPERB,~\citealp{shi2023mlsuperb}).</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.5.1 &mdash; Speech understanding</span><span class="ac-desc">The ability to transcribe speech and extract meaning, intent, and emotion from spoken input. E.g., the Slovenian Speech Recognition benchmark in the SloBENCH evaluation framework (https://slobench.cjvt.si}).</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.5.2 &mdash; Speech generation</span><span class="ac-desc">Generating natural-sounding speech with control over prosody, emotion, and speaker features.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.5.3 &mdash; Speech-specific interaction</span><span class="ac-desc">Managing multi-turn spoken dialogue, maintaining conversational grounding, and understanding paralinguistic cues.</span></div></div>
+  </div>
+</div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.6 &mdash; Cultural competence</span><span class="ac-desc">Understanding culturally-specific concepts and awareness of cultural context, norms, and values in communication. E.g., the Polish linguistic and cultural competency benchmark (PLCC, \citealp{dadasEvaluatingPolishLinguistic2025}).</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">1.7 &mdash; Multimodality</span><span class="ac-desc">Mastering tasks across multiple input/output formats (e.g., text, speech, sign language, audiovisual signal). E.g., the Polish Cultural Vision Benchmark (PCVB, https://huggingface.co/spaces/speakleash/Polish_Cultural_Vision_Benchmark}).</span></div></div>
+  </div>
+</div>
+
+<div class="ac-node" data-depth="0">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="tag tag-green">Knowledge and reasoning</span><span class="ac-desc">Generating output that is consistent with established facts and real-world knowledge, logical reasoning and problem solving.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.1 &mdash; General knowledge</span><span class="ac-desc">Broad world knowledge across common domains and established facts. E.g., the English Massive Multitask Language Understanding (MMLU,~\citealp{hendryckstest2021}) and its translations into European languages \citep{thellmann2024multilingualllmevaluationeuropean} and other languages \citep{singhGlobalMMLUUnderstanding2025}, the English Winograd Schema Challenge (WSC, \citealp{levesque2012winograd}), the English WikiFact benchmark \citep{petroni-etal-2019-language}, and others.</span></div></div>
+<div class="ac-node" data-depth="1">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="ac-name">2.2 &mdash; Domain-specific knowledge</span><span class="ac-desc">Specialized knowledge in professional or technical areas.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.2.1 &mdash; Math</span><span class="ac-desc">Numerical reasoning, problem solving, and formal proofs. E.g., the English Omni-MATH (Mathematical Reasoning) dataset \citep{gao2024omni}, certain tasks in the English BIG-bench (Beyond the Imitation Game Benchmark, \citealp{srivastava2023beyond}) and LiveBench \citep{whiteLiveBenchChallengingContaminationLimited2025a} benchmarks.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.2.2 &mdash; Law</span><span class="ac-desc">Generating output that is consistent with relevant laws, cases, and regulations, and performing various forms of legal reasoning, including issue-spotting and interpretation. E.g., the English BillSum benchmark \citep{kornilova-eidelman-2019-billsum} for legal text summarization and the English LegalBench benchmark of legal reasoning tasks \citep{guha2023legalbench}.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.2.3 &mdash; Finance</span><span class="ac-desc">Knowledge of economic principles, financial systems, and reasoning over markets, investments, and accounting.</span></div></div>
+<div class="ac-leaf" data-depth="3"><div class="ac-indent"><div class="ac-indent-unit"></div><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.2.4 &mdash; Medicine</span><span class="ac-desc">Knowledge of biomedical concepts and interpretation of medical information for diagnostics and treatment. E.g., the English MedQA benchmark \citep{jin2021disease} and the Polish medical leaderboard \citep{polish-medical-llm-leaderboard}.</span></div></div>
+  </div>
+</div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.3 &mdash; Reasoning</span><span class="ac-desc">Processing and reasoning about information logically, drawing inferences and problem-solving. This includes understanding cause-and-effect scenarios. E.g., the English ReCoRD (Reading Comprehension with Commonsense Reasoning, \citealp{zhang2018record}) dataset, the English Hellaswag \citep{zellersHellaSwagCanMachine2019} dataset and its translation into 20 other European languages EU20-HellaSwag \citep{thellmann2024multilingualllmevaluationeuropean}, the English COPA \citep{roemmele2011copa} dataset and its translations into Hungarian \citep{ligeti-nagyHuLUHungarianLanguage2024}, Croatian (\citealp{ljubevsic2021copa-hr}; \citealplanguageresource{copa-hr-clarin}), a Slovenian Cerkno dialect \citep{ljubesic-etal-2024-dialect} and other languages and dialects.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">2.4 &mdash; Agency</span><span class="ac-desc">Sustained long-term planning, strategic reasoning and consistent decision-making over extended interactions. E.g., certain tasks from the English LiveBench \citep{whiteLiveBenchChallengingContaminationLimited2025a} benchmark.</span></div></div>
+  </div>
+</div>
+
+<div class="ac-node" data-depth="0">
+  <button class="ac-trigger" onclick="toggle(this)"><div class="ac-indent"></div><div class="ac-chevron-col"><svg class="ac-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5,3 11,8 5,13"/></svg></div><div class="ac-row-content"><span class="tag tag-blue">Safety and trustworthiness</span><span class="ac-desc">Benchmarks that evaluate the model's reliability and its risks, that is, whether it behaves reliably, predictably, ethically, and without harm.</span></div></button>
+  <div class="ac-children">
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.1 &mdash; Misinformation</span><span class="ac-desc">Detecting or generating false or misleading information. E.g., the English TruthfulQA dataset \citep{lin2022truthfulqa} and its translation into 20 other European languages EU20-TruthfulQA \citep{thellmann2024multilingualllmevaluationeuropean}.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.2 &mdash; Toxicity</span><span class="ac-desc">Identifying offensive, abusive, or harmful language, and avoiding its use. Includes tasks such as hate speech detection. E.g., the English CivilComments benchmark \citep{borkan2019nuanced}, and the Toxicity benchmark in the English DecodingTrust benchmark collection \citep{wang2023decodingtrust}.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.3 &mdash; Bias</span><span class="ac-desc">Detection and mitigation of stereotypes or unfair treatment across groups. Includes benchmarks that assess whether a model’s performance on a task is unjustifiably different across different groups and attributes. E.g., the English Winogender Schema Diagnostics dataset \citep{rudinger-EtAl:2018:N18} and the Fairness and Stereotype benchmarks in the English DecodingTrust benchmark collection \citep{wang2023decodingtrust}.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.4 &mdash; Machine ethics</span><span class="ac-desc">Adherence to ethical principles and moral reasoning in responses, ability to distinguish between moral and immoral actions. E.g., the Machine Ethics benchmark in the English DecodingTrust benchmark collection \citep{wang2023decodingtrust}.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.5 &mdash; Psychological traits</span><span class="ac-desc">Assessing model's characteristics that are typically associated with human personalities.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.6 &mdash; Robustness</span><span class="ac-desc">Reliability under adversarial input, noise, or perturbations. E.g., the Adversarial Robustness, Out-of-Distribution Robustness, and Robustness against Adversarial Demonstrations benchmarks in the English DecodingTrust benchmark collection \citep{wang2023decodingtrust}.</span></div></div>
+<div class="ac-leaf" data-depth="2"><div class="ac-indent"><div class="ac-indent-unit"></div></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="ac-name">3.7 &mdash; Data governance</span><span class="ac-desc">Benchmarks that assess whether models leak their training data in their responses. E.g., the Privacy benchmark in the English DecodingTrust benchmark collection \citep{wang2023decodingtrust}.</span></div></div>
+  </div>
+</div>
+
+<div class="ac-leaf" data-depth="1"><div class="ac-indent"></div><div class="ac-leaf-spacer"></div><div class="ac-leaf-content"><span class="tag tag-red">Alignment and dangerous capabilities</span><span class="ac-desc">Benchmarks that evaluate model capabilities that could have catastrophic consequences, including dangerous capabilities (cyber operations, weapons acquisition, autonomous replication) and alignment risks (power-seeking behavior, shutdown resistance). This category includes tasks that assess whether the model is able to detect and exploit vulnerabilities in hardware, software and data, whether the model can contribute to the development of weapon technologies, whether the model possesses information about itself and its creators, whether it can break free from its operational confines, or whether it is capable of persuasion and manipulation.</span></div></div>
+</div><!-- /accordion-root -->
+  </section>
+</div>
+
+
+
+
+  <!-- ── Google Sheets Embed ── -->
+<div class="container">
+  <section class="section">
+    <div class="section-label">Live Spreadsheet - Demo Database</div>
+
+    <div class="sheets-wrapper">
+      <div class="sheets-toolbar">
+        <div class="sheets-title">
+          <div class="sheets-dot"></div>
+        </div>
+        <!-- Replace # with your sheet URL -->
+        <a class="sheets-link" href="https://docs.google.com/spreadsheets/d/1pbStXk2rJW6xsAzMr2KfjDnKupxS7c1ZUJALr97gdns/edit?usp=sharing" target="_blank">Open in Sheets ↗ (new tab)</a>
+      </div>
+
+      <iframe
+        class="sheets-embed"
+        src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRJ9YRf3awWwTnHK3aHonxntszu4MKHBs37jZm71gBzVxxaTsoVZkUHVwhRxRa5EtIQvOQpBuJdf0nB/pubhtml?widget=true&amp;headers=false"
+        title="LLM Benchmarks – Demo Database"
+		height="1200"
+		>
+      </iframe>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="container">
+    <span>Anonymous Authors</span>
+    <span id="footer-date">2026</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('footer-date').textContent =
+    new Date().toLocaleDateString('en-US', { year: 'numeric' });
+
+  function toggle(btn) {
+    const isOpen = btn.classList.contains('open');
+    btn.classList.toggle('open', !isOpen);
+    const ch = btn.nextElementSibling;
+    if (ch && ch.classList.contains('ac-children')) ch.classList.toggle('open', !isOpen);
+  }
+
+  function expandAll() {
+    document.querySelectorAll('.ac-trigger').forEach(btn => {
+      btn.classList.add('open');
+      const ch = btn.nextElementSibling;
+      if (ch && ch.classList.contains('ac-children')) ch.classList.add('open');
+    });
+  }
+
+  function collapseAll() {
+    document.querySelectorAll('.ac-trigger').forEach(btn => {
+      btn.classList.remove('open');
+      const ch = btn.nextElementSibling;
+      if (ch && ch.classList.contains('ac-children')) ch.classList.remove('open');
+    });
+  }
+</script>
+</body>
+</html>
