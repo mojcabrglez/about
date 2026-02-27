@@ -186,7 +186,7 @@
       padding: 7px 14px 7px 52px;
       font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
       color: var(--muted);
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center;
     }
     .ac-col-header-ex {
       width: var(--ex-col);
@@ -196,19 +196,8 @@
       display: flex; align-items: center;
       font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
       color: var(--muted);
-      transition: width 0.18s, padding 0.18s, border-color 0.18s;
       overflow: hidden;
     }
-    /* toggle button lives in .ac-col-header-main so it's always visible */
-    .ex-toggle {
-      font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--muted); background: transparent;
-      border: 1px solid var(--border); border-radius: 2px;
-      cursor: pointer; padding: 2px 8px; flex-shrink: 0;
-      font-family: 'IBM Plex Mono', monospace;
-      transition: background 0.12s, color 0.12s;
-    }
-    .ex-toggle:hover { background: var(--row-hover); color: var(--text); }
 
     /* Right cell on expandable trigger rows */
     .ac-row-ex {
@@ -343,14 +332,12 @@
     <div class="controls">
       <button class="ctrl-btn" onclick="expandAll()">Expand all</button>
       <button class="ctrl-btn" onclick="collapseAll()">Collapse all</button>
+      <button class="ctrl-btn" onclick="toggleExamples()" id="ex-toggle-btn">Hide examples</button>
     </div>
 
     <!-- Column header — sits directly above .accordion-root -->
     <div class="ac-col-header" id="ac-col-header">
-      <div class="ac-col-header-main">
-        <span>Taxonomy</span>
-        <button class="ex-toggle" onclick="toggleExamples()" id="ex-toggle-btn">Hide examples</button>
-      </div>
+      <div class="ac-col-header-main">Category</div>
       <div class="ac-col-header-ex">Examples</div>
     </div>
 
